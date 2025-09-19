@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Emoji Collector Game</title>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    <style>
+        /* Подключение шрифта */
+        @font-face {
+            font-family: 'TelegramFont';
+            src: url('font.ttf') format('truetype');
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'TelegramFont', sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #a4c8e8 0%, #6a9ed6 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .container {
+            width: 100%;
+            max-width: 500px;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: #40a7e3;
+            color: white;
+            padding: 20px;
+            text-align: center;
+            position: relative;
+        }
+        
+        .header h1 {
+            font-size: 24px;
+            margin-bottom: 5px;
+        }
+        
+        .tabs {
+            display: flex;
+            background: #e8f4fd;
+            border-bottom: 1px solid #d3e6f4;
+        }
+        
+        .tab {
+            flex: 1;
+            text-align: center;
+            padding: 15px;
+            cursor: pointer;
+            transition: background 0.3s;
+            font-weight: bold;
+            color: #5c7c8a;
+        }
+        
+        .tab.active {
+            background: white;
+            color: #40a7e3;
+            border-bottom: 3px solid #40a7e3;
+        }
+        
+        .content {
+            padding: 20px;
+            min-height: 400px;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .profile {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .avatar {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: #40a7e3;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 24px;
+            margin-right: 15px;
+        }
+        
+        .user-info {
+            flex: 1;
+        }
+        
+        .username {
+            font-weight: bold;
+            font-size: 18px;
+            margin-bottom: 5px;
+        }
+        
+        .stats {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .stat {
+            background: #e8f4fd;
+            padding: 10px 15px;
+            border-radius: 15px;
+            text-align: center;
+            flex: 1;
+        }
+        
+        .stat-value {
+            font-size: 20px;
+            font-weight: bold;
+            color: #40a7e3;
+        }
+        
+        .stat-label {
+            font-size: 12px;
+            color: #5c7c8a;
+        }
+        
+        .click-area {
+            text-align: center;
+            margin: 30px 0;
+        }
+        
+        .click-circle {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #ffcb57 0%, #ff7e36 100%);
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 60px;
+            cursor: pointer;
+            box-shadow: 0 10px 20px rgba(255, 126, 54, 0.3);
+            transition: transform 0.1s;
+            user-select: none;
+        }
+        
+        .click-circle:active {
+            transform: scale(0.95);
+        }
+        
+        .energy-bar {
+            height: 10px;
+            background: #e0e0e0;
+            border-radius: 5px;
+            margin: 15px 0;
+            overflow: hidden;
+        }
+        
+        .energy-fill {
+            height: 100%;
+            background: linear-gradient(to right, #40a7e3, #2ecc71);
+            border-radius: 5px;
+            width: 100%;
+            transition: width 0.5s;
+        }
+        
+        .collection {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .emoji-item {
+            background: #e8f4fd;
+            border-radius: 15px;
+            padding: 15px;
+            text-align: center;
+            transition: transform 0.3s;
+        }
+        
+        .emoji-item:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .emoji {
+            font-size: 30px;
+            margin-bottom: 5px;
+        }
+        
+        .emoji-count {
+            font-weight: bold;
+            color: #40a7e3;
+        }
+        
+        .emoji-id {
+            font-size: 12px;
+            color: #5c7c8a;
+        }
+        
+        .marketplace {
+            margin-top: 20px;
+        }
+        
+        .market-item {
+            display: flex;
+            align-items: center;
+            background: #e8f4fd;
+            border-radius: 15px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+        
+        .market-emoji {
+            font-size: 30px;
+            margin-right: 15px;
+        }
+        
+        .market-details {
+            flex: 1;
+        }
+        
+        .market-price {
+            font-weight: bold;
+            color: #40a7e3;
+        }
+        
+        .market-tax {
+            font-size: 12px;
+            color: #e74c3c;
+        }
+        
+        .buy-button {
+            background: #40a7e3;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        
+        .buy-button:hover {
+            background: #2a92d0;
+        }
+        
+        .sell-form {
+            background: #e8f4fd;
+            border-radius: 15px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+        
+        .form-title {
+            font-weight: bold;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        .form-select, .form-input {
+            width: 100%;
+            padding: 12px;
+            border-radius: 10px;
+            border: 1px solid #d3e6f4;
+            background: white;
+        }
+        
+        .form-button {
+            background: #40a7e3;
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 10px;
+            width: 100%;
+            cursor: pointer;
+            transition: background 0.3s;
+            font-weight: bold;
+        }
+        
+        .form-button:hover {
+            background: #2a92d0;
+        }
+        
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #2ecc71;
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            transform: translateX(100%);
+            transition: transform 0.3s;
+            z-index: 1000;
+        }
+        
+        .notification.show {
+            transform: translateX(0);
+        }
+        
+        .notification.error {
+            background: #e74c3c;
+        }
+        
+        @media (max-width: 500px) {
+            .container {
+                border-radius: 15px;
+            }
+            
+            .collection {
+                grid-template-columns: repeat(3, 1fr);
+            }
+            
+            .click-circle {
+                width: 120px;
+                height: 120px;
+                font-size: 50px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Emoji Collector</h1>
+            <p>Собирай уникальные эмодзи!</p>
+        </div>
+        
+        <div class="tabs">
+            <div class="tab active" data-tab="game">Игра</div>
+            <div class="tab" data-tab="collection">Коллекция</div>
+            <div class="tab" data-tab="market">Рынок</div>
+        </div>
+        
+        <div class="content">
+            <!-- Игровая вкладка -->
+            <div class="tab-content active" id="game-tab">
+                <div class="profile">
+                    <div class="avatar">U</div>
+                    <div class="user-info">
+                        <div class="username" id="username">Username</div>
+                        <div class="user-id">ID: <span id="user-id"></span></div>
+                    </div>
+                </div>
+                
+                <div class="stats">
+                    <div class="stat">
+                        <div class="stat-value" id="sparks-count">0</div>
+                        <div class="stat-label">Искры ✨</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-value" id="energy-value">100/100</div>
+                        <div class="stat-label">Энергия ⚡</div>
+                    </div>
+                </div>
+                
+                <div class="energy-bar">
+                    <div class="energy-fill" id="energy-bar"></div>
+                </div>
+                
+                <div class="click-area">
+                    <div class="click-circle" id="click-circle">✨</div>
+                    <p>Кликай чтобы зарабатывать искры!</p>
+                </div>
+            </div>
+            
+            <!-- Вкладка коллекции -->
+            <div class="tab-content" id="collection-tab">
+                <h2>Ваша коллекция</h2>
+                <div class="collection" id="emoji-collection">
+                    <!-- Эмодзи будут добавляться здесь -->
+                </div>
+            </div>
+            
+            <!-- Вкладка рынка -->
+            <div class="tab-content" id="market-tab">
+                <h2>Рынок эмодзи</h2>
+                <div class="marketplace" id="marketplace-items">
+                    <!-- Товары будут добавляться здесь -->
+                </div>
+                
+                <div class="sell-form">
+                    <div class="form-title">Выставить на продажу</div>
+                    <div class="form-group">
+                        <select class="form-select" id="sell-emoji-select">
+                            <option value="">Выберите эмодзи</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <input type="number" class="form-input" id="sell-price" placeholder="Цена в искрах" min="10">
+                    </div>
+                    <button class="form-button" id="sell-button">Выставить на продажу</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="notification" id="notification">Сообщение</div>
+
+    <script>
+        // Инициализация Firebase
+        const firebaseConfig = {
+            databaseURL: "https://tggiftbot-default-rtdb.europe-west1.firebasedatabase.app/"
+        };
+        
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+        
+        // Переменные игры
+        let userData = {
+            sparks: 100,
+            energy: 100,
+            lastEnergyUpdate: Date.now(),
+            emojis: {},
+            username: "Player",
+            userId: generateUserId()
+        };
+        
+        // Генерация ID пользователя
+        function generateUserId() {
+            return "user_" + Math.floor(Math.random() * 1000000);
+        }
+        
+        // Элементы DOM
+        const tabs = document.querySelectorAll('.tab');
+        const tabContents = document.querySelectorAll('.tab-content');
+        const clickCircle = document.getElementById('click-circle');
+        const sparksCount = document.getElementById('sparks-count');
+        const energyValue = document.getElementById('energy-value');
+        const energyBar = document.getElementById('energy-bar');
+        const emojiCollection = document.getElementById('emoji-collection');
+        const marketplaceItems = document.getElementById('marketplace-items');
+        const sellEmojiSelect = document.getElementById('sell-emoji-select');
+        const sellPrice = document.getElementById('sell-price');
+        const sellButton = document.getElementById('sell-button');
+        const notification = document.getElementById('notification');
+        const usernameElement = document.getElementById('username');
+        const userIdElement = document.getElementById('user-id');
+        
+        // Цвета для сердечек
+        const heartColors = ["❤️", "🧡", "💛", "💚", "🩵", "💙", "💜", "🤎", "🖤", "🩶", "🤍", "🩷", "💝"];
+        
+        // Инициализация игры
+        function initGame() {
+            // Загрузка данных пользователя
+            loadUserData();
+            
+            // Настройка вкладок
+            tabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    const tabId = tab.getAttribute('data-tab');
+                    
+                    tabs.forEach(t => t.classList.remove('active'));
+                    tabContents.forEach(tc => tc.classList.remove('active'));
+                    
+                    tab.classList.add('active');
+                    document.getElementById(`${tabId}-tab`).classList.add('active');
+                    
+                    if (tabId === 'collection') {
+                        updateCollectionUI();
+                    } else if (tabId === 'market') {
+                        loadMarketplace();
+                    }
+                });
+            });
+            
+            // Обработчик клика по кругу
+            clickCircle.addEventListener('click', handleClick);
+            
+            // Обработчик кнопки продажи
+            sellButton.addEventListener('click', putOnMarket);
+            
+            // Обновление энергии каждую секунду
+            setInterval(updateEnergy, 1000);
+            
+            // Загрузка начальных данных
+            updateUI();
+            updateCollectionUI();
+            loadMarketplace();
+            populateSellSelect();
+            
+            // Показ уведомления о начале игры
+            showNotification("Добро пожаловать в игру! Кликайте на круг, чтобы зарабатывать искры и эмодзи!");
+        }
+        
+        // Загрузка данных пользователя
+        function loadUserData() {
+            // Установка имени пользователя и ID
+            usernameElement.textContent = userData.username;
+            userIdElement.textContent = userData.userId;
+            
+            // Инициализация эмодзи, если их нет
+            if (!userData.emojis["❤️"]) {
+                userData.emojis["❤️"] = { count: 0, variants: [] };
+            }
+            
+            if (!userData.emojis["🎁"]) {
+                userData.emojis["🎁"] = { count: 0, variants: [] };
+            }
+        }
+        
+        // Обработка клика
+        function handleClick() {
+            if (userData.energy >= 10) {
+                userData.energy -= 10;
+                userData.sparks += 5;
+                
+                // С шансом 20% получить эмодзи
+                if (Math.random() < 0.2) {
+                    const emojiType = Math.random() < 0.9 ? "❤️" : "🎁";
+                    addEmojiToCollection(emojiType);
+                    
+                    showNotification(`Получен эмодзи: ${emojiType}`);
+                }
+                
+                updateUI();
+                
+                // Анимация клика
+                clickCircle.style.transform = 'scale(0.95)';
+                setTimeout(() => {
+                    clickCircle.style.transform = 'scale(1)';
+                }, 100);
+            } else {
+                showNotification("Недостаточно энергии! Подождите восстановления.", true);
+            }
+        }
+        
+        // Добавление эмодзи в коллекцию
+        function addEmojiToCollection(emojiType) {
+            if (emojiType === "❤️") {
+                const color = heartColors[Math.floor(Math.random() * heartColors.length)];
+                const id = Math.floor(Math.random() * 10000);
+                
+                if (!userData.emojis["❤️"].variants) {
+                    userData.emojis["❤️"].variants = [];
+                }
+                
+                userData.emojis["❤️"].variants.push({ color, id });
+            }
+            
+            userData.emojis[emojiType].count++;
+        }
+        
+        // Обновление энергии
+        function updateEnergy() {
+            const now = Date.now();
+            const timeDiff = (now - userData.lastEnergyUpdate) / 1000; // в секундах
+            
+            if (timeDiff >= 10 && userData.energy < 100) {
+                userData.energy += 1;
+                userData.lastEnergyUpdate = now;
+                updateUI();
+            }
+        }
+        
+        // Обновление интерфейса
+        function updateUI() {
+            sparksCount.textContent = userData.sparks;
+            energyValue.textContent = `${userData.energy}/100`;
+            energyBar.style.width = `${userData.energy}%`;
+        }
+        
+        // Обновление интерфейса коллекции
+        function updateCollectionUI() {
+            emojiCollection.innerHTML = '';
+            
+            for (const [emoji, data] of Object.entries(userData.emojis)) {
+                if (data.count > 0) {
+                    if (emoji === "❤️" && data.variants && data.variants.length > 0) {
+                        // Показываем варианты сердечек
+                        data.variants.forEach(variant => {
+                            const emojiItem = document.createElement('div');
+                            emojiItem.className = 'emoji-item';
+                            emojiItem.innerHTML = `
+                                <div class="emoji">${variant.color}</div>
+                                <div class="emoji-id">#${variant.id}</div>
+                            `;
+                            emojiCollection.appendChild(emojiItem);
+                        });
+                    } else if (data.count > 0) {
+                        // Обычные эмодзи
+                        const emojiItem = document.createElement('div');
+                        emojiItem.className = 'emoji-item';
+                        emojiItem.innerHTML = `
+                            <div class="emoji">${emoji}</div>
+                            <div class="emoji-count">${data.count}</div>
+                        `;
+                        emojiCollection.appendChild(emojiItem);
+                    }
+                }
+            }
+            
+            // Если коллекция пуста
+            if (emojiCollection.children.length === 0) {
+                emojiCollection.innerHTML = '<p>Ваша коллекция пуста. Кликайте на круг в игре, чтобы получить эмодзи!</p>';
+            }
+        }
+        
+        // Загрузка marketplace
+        function loadMarketplace() {
+            // В реальном приложении здесь будет загрузка из Firebase
+            // Для демонстрации создаем несколько тестовых товаров
+            
+            marketplaceItems.innerHTML = `
+                <div class="market-item">
+                    <div class="market-emoji">❤️</div>
+                    <div class="market-details">
+                        <div>
